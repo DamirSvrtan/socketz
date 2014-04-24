@@ -15,13 +15,17 @@ class SocketzApp < Rack::WebSocket::Application
   end
 
   def on_close(env)
+    connection = @websocket_handler.connection
+    SocketChannels.remove_connection(connection)
+    puts "Number of channels: #{SocketChannels.channels.count}"
+    puts "Number of connections: #{SocketChannels.channels.first.connections.count}"
     puts "Client disconnected"
   end
 
   def on_message(env, msg)
     puts "Received message: " + msg
     channel = SocketChannels.channels.first
-    channel.broadcast "OP?"
+    channel.broadcast msg
     # send_data "I'm fine, and how are you?"
   end
 
@@ -63,7 +67,9 @@ class SocketChannels
   end
 
   def self.remove_connection(connection)
-
+    env = connection.socket.request.env
+    channel_name = env['PATH_INFO'].sub('/', '')
+    SocketChannels.get_channel(channel_name).connections.delete(connection)
   end
 
   def self.channels
