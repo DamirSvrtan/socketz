@@ -4,9 +4,14 @@ require 'rack/websocket'
 
 class SocketzApp < Rack::WebSocket::Application
   def on_open(env)
+    connection = @websocket_handler.connection
+    SocketChannels.add_connection(connection)
+    puts "Number of channels: #{SocketChannels.channels.count}"
+    puts "Number of connections: #{SocketChannels.channels.first.connections.count}"
     puts "Client connected"
     # binding.pry
-    @websocket_handler.connection.send "Hello to you!"
+    # @websocket_handler.connection.socket.request.env['PATH_INFO']
+    # connection.send "Hello to you!"
   end
 
   def on_close(env)
@@ -15,7 +20,9 @@ class SocketzApp < Rack::WebSocket::Application
 
   def on_message(env, msg)
     puts "Received message: " + msg
-    send_data "I'm fine, and how are you?"
+    channel = SocketChannels.channels.first
+    channel.broadcast "OP?"
+    # send_data "I'm fine, and how are you?"
   end
 
   def on_error(env, error)
@@ -41,6 +48,23 @@ end
 class SocketChannels
 
   @@channels = []
+
+  def self.add_connection(connection)
+    env = connection.socket.request.env
+    channel_name = env['PATH_INFO'].sub('/', '')
+
+    if SocketChannels.has_channel?(channel_name)
+      SocketChannels.get_channel(channel_name).connections << connection
+    else
+      socket_channel = SocketChannel.new(channel_name)
+      socket_channel.connections << connection
+      SocketChannels.push(socket_channel)
+    end
+  end
+
+  def self.remove_connection(connection)
+
+  end
 
   def self.channels
     @@channels
@@ -72,27 +96,33 @@ class SocketChannel
     @name = name
     self.connections = []
   end
+
+  def broadcast(msg)
+    connections.each do |connection|
+      connection.send msg
+    end
+  end
+
 end
 
 
 class HttpSocketz
   def call(env)
     if env['HTTP_UPGRADE'] == "websocket"
-      channel_name = env['PATH_INFO'].sub('/', '')
-      connection = env["HTTP_SEC_WEBSOCKET_KEY"]
+      # channel_name = env['PATH_INFO'].sub('/', '')
+      # connection = env["HTTP_SEC_WEBSOCKET_KEY"]
 
-      if SocketChannels.has_channel?(channel_name)
-        binding.pry
-        SocketChannels.get_channel(channel_name).connections << connection
-      else
-        socket_channel = SocketChannel.new(channel_name)
-        socket_channel.connections << connection
-        SocketChannels.push(socket_channel)
-      end
+      # if SocketChannels.has_channel?(channel_name)
+      #   binding.pry
+      #   SocketChannels.get_channel(channel_name).connections << connection
+      # else
+      #   socket_channel = SocketChannel.new(channel_name)
+      #   socket_channel.connections << connection
+      #   SocketChannels.push(socket_channel)
+      # end
 
       SocketzApp.new.call(env)
     else
-      binding.pry
       HttpApp.new.call(env)
     end
   end

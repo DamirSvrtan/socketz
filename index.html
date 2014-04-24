@@ -1,12 +1,12 @@
 <html>
   <script>
-    if ('WebSocket' in window){
-      /* WebSocket is supported. You can proceed with your code*/
-      alert("ACTIVE")
-    } else {
-      /*WebSockets are not supported. Try a fallback method like long-polling etc*/
-      alert("INACTIVE")
-    }
+    // if ('WebSocket' in window){
+    //   /* WebSocket is supported. You can proceed with your code*/
+    //   alert("ACTIVE")
+    // } else {
+    //   /*WebSockets are not supported. Try a fallback method like long-polling etc*/
+    //   alert("INACTIVE")
+    // }
 
     var connection = new WebSocket('ws://'+ location.host + '/socketz');
     
