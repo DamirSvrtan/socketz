@@ -38,13 +38,61 @@ end
 #   run SocketzApp.new
 # end
 
+class SocketChannels
+
+  @@channels = []
+
+  def self.channels
+    @@channels
+  end
+
+  def self.push(channel)
+    if has_channel?(channel.name)
+      raise "Can't add the same channel twice!"
+    else
+      @@channels << channel
+    end
+  end
+
+  def self.has_channel?(name)
+    @@channels.any? {|channel| channel.name == name}
+  end
+
+  def self.get_channel(name)
+    @@channels.find {|channel| channel.name == name}
+  end
+
+end
+
+class SocketChannel 
+  attr_reader :name
+  attr_accessor :connections
+
+  def initialize(name)
+    @name = name
+    self.connections = []
+  end
+end
+
 
 class HttpSocketz
   def call(env)
     if env['HTTP_UPGRADE'] == "websocket"
-      # binding.pry
+      channel_name = env['PATH_INFO'].sub('/', '')
+      connection = env["HTTP_SEC_WEBSOCKET_KEY"]
+
+      if SocketChannels.has_channel?(channel_name)
+        binding.pry
+        SocketChannels.get_channel(channel_name).connections << connection
+      else
+        socket_channel = SocketChannel.new(channel_name)
+        socket_channel.connections << connection
+        SocketChannels.push(socket_channel)
+      end
+
       SocketzApp.new.call(env)
     else
+      binding.pry
       HttpApp.new.call(env)
     end
   end
