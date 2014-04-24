@@ -5,7 +5,8 @@ require 'rack/websocket'
 class SocketzApp < Rack::WebSocket::Application
   def on_open(env)
     puts "Client connected"
-    send_data "Hello to you!"
+    # binding.pry
+    @websocket_handler.connection.send "Hello to you!"
   end
 
   def on_close(env)
@@ -29,10 +30,24 @@ class HttpApp
   end
 end
 
-map '/' do
-  run HttpApp.new
+# map '/' do
+#   run HttpApp.new
+# end
+
+# map '/socketz' do
+#   run SocketzApp.new
+# end
+
+
+class HttpSocketz
+  def call(env)
+    if env['HTTP_UPGRADE'] == "websocket"
+      # binding.pry
+      SocketzApp.new.call(env)
+    else
+      HttpApp.new.call(env)
+    end
+  end
 end
 
-map '/socketz' do
-  run SocketzApp.new
-end
+run HttpSocketz.new
